@@ -69,20 +69,24 @@ class Importer:
 
             searchkey = item.searchkey
             header = item.header(self.headertag)
+            was_spam = self.was_spam(searchkey)
 
-            if (item.folder == item.store.junk and \
-                (not header or header.upper() != 'YES')):
+            if (item.folder == item.store.junk):
+                if (not header or header.upper() != 'YES' or was_spam):
+                    fn = os.path.join(self.hamdir, searchkey + '.eml')
+                    if os.path.isfile(fn):
+                        os.unlink(fn)
 
-                fn = os.path.join(self.hamdir, searchkey + '.eml')
-                if os.path.isfile(fn):
-                    os.unlink(fn)
+                    self.log.info("Learning message as SPAM, entryid: %s", item.entryid)
+                    self.learn(item, searchkey, True)
 
-                self.log.info("Learning message as SPAM, entryid: %s", item.entryid)
-                self.learn(item, searchkey, True)
+                elif (header.upper() == 'YES'):
+                    self.log.info("Keeping track of message as SPAM, entryid: %s", item.entryid)
+                    self.mark_spam(searchkey)
 
             elif (item.folder == item.store.inbox and \
                   self.learnham and \
-                  self.was_spam(searchkey)):
+                  was_spam):
 
                 fn = os.path.join(self.spamdir, searchkey + '.eml')
                 if os.path.isfile(fn):
